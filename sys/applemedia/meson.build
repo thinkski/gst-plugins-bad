@@ -51,6 +51,14 @@ if avfoundation_dep.found()
     applemedia_frameworks += [avfoundation_dep]
 endif
 
+coremediaio_dep = dependency('CoreMediaIO', required : applemedia_option)
+if coremediaio_dep.found()
+    applemedia_sources += [
+        'cmiovideosink.m',
+    ]
+    applemedia_frameworks += [coremediaio_dep]
+endif
+
 videotoolbox_dep = dependency('VideoToolbox', required : applemedia_option)
 if videotoolbox_dep.found()
     applemedia_sources += [
