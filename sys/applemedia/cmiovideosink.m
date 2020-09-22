@@ -32,8 +32,8 @@
 
 #include "cmiovideosink.h"
 
-GST_DEBUG_CATEGORY (gst_debug_av_sink);
-#define GST_CAT_DEFAULT gst_debug_av_sink
+GST_DEBUG_CATEGORY (gst_debug_cmio_video_sink);
+#define GST_CAT_DEFAULT gst_debug_cmio_video_sink
 
 static void gst_cmio_video_sink_finalize (GObject * object);
 static void gst_cmio_video_sink_set_property (GObject * object, guint prop_id,
@@ -70,7 +70,7 @@ enum
 
 #define gst_cmio_video_sink_parent_class parent_class
 G_DEFINE_TYPE_WITH_CODE (GstCMIOVideoSink, gst_cmio_video_sink,
-    GST_TYPE_VIDEO_SINK, GST_DEBUG_CATEGORY_INIT (gst_debug_av_sink,
+    GST_TYPE_VIDEO_SINK, GST_DEBUG_CATEGORY_INIT (gst_debug_cmio_video_sink,
     	"cmiovideosink", 0, "CoreMediaIO Video Sink"));
 
 static void
@@ -129,7 +129,7 @@ gst_cmio_video_sink_set_property (GObject * object, guint prop_id,
   switch (prop_id) {
     case PROP_NAME:
     {
-      cmio_sink->name = g_value_get_string (value);
+      cmio_sink->name = g_strdup (g_value_get_string (value));
       break;
     }
     default:
@@ -202,61 +202,9 @@ gst_cmio_video_sink_get_times (GstBaseSink * bsink, GstBuffer * buf,
 static GstCaps *
 gst_cmio_video_sink_get_caps (GstBaseSink * bsink, GstCaps * filter)
 {
-  GstCMIOVideoSink *av_sink = GST_CMIO_VIDEO_SINK (bsink);
-  CFArrayRef formats;
-  GstCaps *ret, *tmp;
-  int i, n;
-
-  formats =
-      CVPixelFormatDescriptionArrayCreateWithAllPixelFormatTypes
-      (kCFAllocatorDefault);
+  GstCaps *ret;
 
   ret = gst_caps_new_empty ();
-
-  n = CFArrayGetCount (formats);
-  for (i = 0; i < n; i++) {
-    CFDictionaryRef attrs;
-    CFNumberRef fourcc;
-    unsigned int pixel_format;
-    GstVideoFormat v_format;
-    const char *format_str;
-    char *caps_str;
-
-    fourcc = (CFNumberRef)CFArrayGetValueAtIndex(formats, i);
-    CFNumberGetValue (fourcc, kCFNumberIntType, &pixel_format);
-    attrs = CVPixelFormatDescriptionCreateWithPixelFormatType (kCFAllocatorDefault,
-        pixel_format);
-
-    CFRelease (fourcc);
-
-    v_format = _pixel_format_description_to_video_format (attrs);
-    if (v_format != GST_VIDEO_FORMAT_UNKNOWN) {
-      format_str = gst_video_format_to_string (v_format);
-
-      caps_str = g_strdup_printf ("video/x-raw, format=%s", format_str);
-
-      ret = gst_caps_merge (ret, gst_caps_from_string (caps_str));
-
-      g_free (caps_str);
-    }
-
-    CFRelease (attrs);
-  }
-
-  ret = gst_caps_simplify (ret);
-
-  gst_caps_set_simple (ret, "width", GST_TYPE_INT_RANGE, 0, G_MAXINT, "height",
-      GST_TYPE_INT_RANGE, 0, G_MAXINT, "framerate", GST_TYPE_FRACTION_RANGE, 0,
-      1, G_MAXINT, 1, NULL);
-  GST_DEBUG_OBJECT (av_sink, "returning caps %" GST_PTR_FORMAT, ret);
-
-  if (filter) {
-    tmp = gst_caps_intersect_full (ret, filter, GST_CAPS_INTERSECT_FIRST);
-    gst_caps_unref (ret);
-    ret = tmp;
-  }
-
-  CFRelease (formats);
 
   return ret;
 }
@@ -369,36 +317,13 @@ gst_cmio_video_sink_prepare (GstBaseSink * bsink, GstBuffer * buf)
 static GstFlowReturn
 gst_cmio_video_sink_show_frame (GstVideoSink * vsink, GstBuffer * buf)
 {
-  GstCMIOVideoSink *av_sink;
-  GstFlowReturn ret;
+  GstCMIOVideoSink *cmio_sink;
 
   GST_TRACE_OBJECT (vsink, "rendering buffer:%p", buf);
 
-  av_sink = GST_CMIO_VIDEO_SINK (vsink);
+  cmio_sink = GST_CMIO_VIDEO_SINK (vsink);
 
-  g_mutex_lock (&av_sink->render_lock);
-  if (av_sink->buffer)
-    gst_buffer_unref (av_sink->buffer);
-  av_sink->buffer = gst_buffer_ref (buf);
-  ret = av_sink->render_flow_return;
-
-  if (!av_sink->layer_requesting_data)
-    _request_data (av_sink);
-  g_mutex_unlock (&av_sink->render_lock);
-
-#if defined(MAC_OS_X_VERSION_MAX_ALLOWED) && \
-    MAC_OS_X_VERSION_MAX_ALLOWED >= 1010 && \
-    defined(MAC_OS_X_VERSION_MIN_REQUIRED) && \
-    MAC_OS_X_VERSION_MIN_REQUIRED <= MAC_OS_X_VERSION_10_4
-    CMIOBufferDisplayLayer *layer = GST_CMIO_VIDEO_SINK_LAYER(av_sink);
-  if ([layer status] == AVQueuedSampleBufferRenderingStatusFailed) {
-    GST_ERROR_OBJECT (av_sink, "failed to enqueue buffer on layer, %s",
-        [[[layer error] description] UTF8String]);
-    return GST_FLOW_ERROR;
-  }
-#endif
-
-  return ret;
+  return GST_FLOW_OK;
 }
 
 static gboolean

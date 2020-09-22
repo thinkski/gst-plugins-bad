@@ -123,3 +123,5 @@ if applemedia_found_deps
     pkgconfig.generate(gstapplemedia, install_dir : plugins_pkgconfig_install_dir)
     plugins += [gstapplemedia]
 endif
+
+subdir('CMIOMinimalSample')

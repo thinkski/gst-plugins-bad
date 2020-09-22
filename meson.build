@@ -28,6 +28,7 @@ curversion = gst_version_minor * 100 + gst_version_micro
 libversion = '@0@.@1@.0'.format(soversion, curversion)
 osxversion = curversion + 1
 
+coremediaio_plugins_install_dir = get_option('coremediaio-plugins-install-dir')
 plugins_install_dir = join_paths(get_option('libdir'), 'gstreamer-1.0')
 plugins = []
 

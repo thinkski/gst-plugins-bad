@@ -200,3 +200,8 @@ option('package-origin', type : 'string', value : 'Unknown package origin', yiel
        description : 'package origin URL to use in plugins')
 option('doc', type : 'feature', value : 'auto', yield: true,
        description: 'Enable documentation.')
+
+# Apple specific options
+option('coremediaio-plugins-install-dir', type : 'string',
+       value : '/Library/CoreMediaIO/Plug-Ins/DAL',
+       description : 'Installation directory for CoreMediaIO DAL Plug-Ins')
